@@ -27,8 +27,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -39,7 +42,8 @@ private val Panel = Color(0xFF0D1930)
 private val Cyan = Color(0xFF43E8FF)
 private val Blue = Color(0xFF168BFF)
 private val Purple = Color(0xFF845BFF)
-private val Muted = Color(0xFF8EA9CA)
+private val Muted = Color(0xFF8CA5C8)
+private val NexFont = FontFamily(Font(R.font.poppins_regular, FontWeight.Normal))
 
 class MainActivity : ComponentActivity() {
     private var tts: TextToSpeech? = null
@@ -71,6 +75,8 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun JarvisApp(onSpeak: (String) -> Unit) {
+    var showSplash by remember { mutableStateOf(true) }
+    LaunchedEffect(Unit) { delay(1400); showSplash = false }
     var tab by remember { mutableStateOf("Home") }
     var prompt by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
@@ -129,8 +135,8 @@ private fun JarvisApp(onSpeak: (String) -> Unit) {
         }
     }
 
-    MaterialTheme {
-        Column(
+    MaterialTheme(typography = Typography().run { copy(bodyLarge = bodyLarge.copy(fontFamily = NexFont), bodyMedium = bodyMedium.copy(fontFamily = NexFont), bodySmall = bodySmall.copy(fontFamily = NexFont), titleLarge = titleLarge.copy(fontFamily = NexFont), titleMedium = titleMedium.copy(fontFamily = NexFont), titleSmall = titleSmall.copy(fontFamily = NexFont), headlineSmall = headlineSmall.copy(fontFamily = NexFont), labelLarge = labelLarge.copy(fontFamily = NexFont), labelMedium = labelMedium.copy(fontFamily = NexFont), labelSmall = labelSmall.copy(fontFamily = NexFont)) }) {
+        if (showSplash) NexSplashScreen() else Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
@@ -183,7 +189,7 @@ private fun JarvisApp(onSpeak: (String) -> Unit) {
                         .background(Panel, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("AI", color = Cyan, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text("N", color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -459,7 +465,11 @@ private fun JarvisApp(onSpeak: (String) -> Unit) {
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 5.dp),
+                    .padding(bottom = 5.dp)
+                    .clip(RoundedCornerShape(26.dp))
+                    .background(Brush.horizontalGradient(listOf(Color(0xF20C1930), Color(0xF2152342))))
+                    .border(1.dp, Cyan.copy(alpha = 0.24f), RoundedCornerShape(26.dp))
+                    .padding(horizontal = 2.dp, vertical = 7.dp),
                 horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -469,6 +479,48 @@ private fun JarvisApp(onSpeak: (String) -> Unit) {
                 NavItem("◎", "Profile", tab == "Profile") { tab = "Profile" }
                 NavItem("⚙", "Settings", tab == "Settings") { tab = "Settings" }
             }
+        }
+    }
+}
+
+
+@Composable
+private fun NexSplashScreen() {
+    val transition = rememberInfiniteTransition(label = "nexSplash")
+    val pulse by transition.animateFloat(
+        initialValue = 0.92f,
+        targetValue = 1.05f,
+        animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
+        label = "splashPulse"
+    )
+    Box(
+        Modifier.fillMaxSize()
+            .background(Brush.verticalGradient(listOf(Color(0xFF101F3C), Color(0xFF050B18), Color(0xFF030711))))
+            .statusBarsPadding()
+            .navigationBarsPadding(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                Modifier.size(124.dp).scale(pulse)
+                    .background(Brush.linearGradient(listOf(Cyan, Blue, Purple)), CircleShape)
+                    .padding(3.dp).background(Background, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("N", color = Color.White, fontSize = 66.sp, fontWeight = FontWeight.Light)
+            }
+            Spacer(Modifier.height(25.dp))
+            Text("NEX AI", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold, letterSpacing = 4.sp)
+            Spacer(Modifier.height(7.dp))
+            Text("YOUR PERSONAL AI COMPANION", color = Cyan, fontSize = 10.sp, letterSpacing = 2.sp)
+            Spacer(Modifier.height(32.dp))
+            CircularProgressIndicator(
+                modifier = Modifier.size(24.dp),
+                color = Cyan,
+                strokeWidth = 2.dp
+            )
+            Spacer(Modifier.height(10.dp))
+            Text("INITIALIZING SYSTEM", color = Muted, fontSize = 10.sp, letterSpacing = 1.5.sp)
         }
     }
 }
@@ -541,9 +593,9 @@ private fun Orb() {
             contentAlignment = Alignment.Center
         ) {
             Text(
-                "J",
-                color = Cyan,
-                fontSize = 55.sp,
+                "N",
+                color = Color.White,
+                fontSize = 52.sp,
                 fontWeight = FontWeight.Light
             )
         }
@@ -608,20 +660,31 @@ private fun NavItem(
 ) {
     Column(
         modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
+            .weight(1f)
+            .clip(RoundedCornerShape(18.dp))
+            .background(if (selected) Cyan.copy(alpha = 0.12f) else Color.Transparent)
+            .border(
+                if (selected) 1.dp else 0.dp,
+                if (selected) Cyan.copy(alpha = 0.28f) else Color.Transparent,
+                RoundedCornerShape(18.dp)
+            )
             .clickable { onClick() }
-            .padding(horizontal = 10.dp, vertical = 5.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(horizontal = 3.dp, vertical = 7.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
         Text(
             icon,
             color = if (selected) Cyan else Muted,
-            fontSize = 22.sp
+            fontSize = 21.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
         )
         Text(
             label,
-            color = if (selected) Cyan else Muted,
-            fontSize = 10.sp
+            color = if (selected) Color.White else Muted,
+            fontSize = 9.sp,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            maxLines = 1
         )
     }
 }
