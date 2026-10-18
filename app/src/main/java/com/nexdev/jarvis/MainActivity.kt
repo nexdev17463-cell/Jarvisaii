@@ -32,10 +32,6 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
-import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URL
 import java.util.Locale
 
 private val Background = Color(0xFF050B18)
@@ -78,6 +74,9 @@ private fun JarvisApp(onSpeak: (String) -> Unit) {
     var tab by remember { mutableStateOf("Home") }
     var prompt by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
+    var speakReplies by remember { mutableStateOf(true) }
+    var confirmAccessibilityActions by remember { mutableStateOf(true) }
+    var selectedTheme by remember { mutableStateOf("Midnight") }
     val messages = remember {
         mutableStateListOf(
             "JARVIS" to "Hello! Main JARVIS hoon. Hindi ya English mein baat karo."
@@ -123,7 +122,7 @@ private fun JarvisApp(onSpeak: (String) -> Unit) {
 
         scope.launch {
             val answer = withContext(Dispatchers.IO) {
-                askJarvis(question, BuildConfig.GEMINI_API_KEY)
+                askJarvis(question)
             }
             messages.add("JARVIS" to answer)
             loading = false
@@ -136,7 +135,11 @@ private fun JarvisApp(onSpeak: (String) -> Unit) {
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        listOf(Color(0xFF101F3C), Background, Color(0xFF030711))
+                        when (selectedTheme) {
+                            "Ocean" -> listOf(Color(0xFF073B4C), Background, Color(0xFF020B12))
+                            "Violet" -> listOf(Color(0xFF28164B), Background, Color(0xFF080510))
+                            else -> listOf(Color(0xFF101F3C), Background, Color(0xFF030711))
+                        }
                     )
                 )
                 .statusBarsPadding()
@@ -215,7 +218,7 @@ private fun JarvisApp(onSpeak: (String) -> Unit) {
                                 )
                                 Spacer(Modifier.height(6.dp))
                                 Text(item.second, color = Color.White, fontSize = 15.sp)
-                                if (!user) {
+                                if (!user && speakReplies) {
                                     TextButton(onClick = { onSpeak(item.second) }) {
                                         Text("▶  SPEAK", color = Cyan)
                                     }
@@ -241,6 +244,38 @@ private fun JarvisApp(onSpeak: (String) -> Unit) {
                     }
                     ToolCard("⌘", "Smart Chat", "Continue your AI conversation") {
                         tab = "Chat"
+                    }
+                    Spacer(Modifier.weight(1f))
+                }
+
+                "Settings" -> {
+                    Text("PREFERENCES & PRIVACY", color = Cyan, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(12.dp))
+                    SettingsCard("Appearance", "Choose the JARVIS interface theme") {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf("Midnight", "Ocean", "Violet").forEach { theme ->
+                                FilterChip(
+                                    selected = selectedTheme == theme,
+                                    onClick = { selectedTheme = theme },
+                                    label = { Text(theme) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = Blue.copy(alpha = 0.25f),
+                                        selectedLabelColor = Cyan
+                                    )
+                                )
+                            }
+                        }
+                    }
+                    SettingsToggle("Voice replies", "Allow JARVIS to speak replies when you tap Speak", speakReplies) { speakReplies = it }
+                    SettingsToggle("Confirm sensitive actions", "Preference for future phone-control actions; no actions are auto-run in this build", confirmAccessibilityActions) { confirmAccessibilityActions = it }
+                    SettingsCard("Permissions", "Microphone is requested only when you tap voice input. Accessibility is optional and must be enabled manually in Android Settings; phone-control actions are not wired into this UI yet.") {
+                        Text("Review permissions in Android Settings", color = Cyan, fontSize = 12.sp)
+                    }
+                    SettingsCard("AI privacy", "This build no longer embeds a Gemini API key. Connect a secure backend before enabling cloud AI chat.") {
+                        Text("API key protection: backend required", color = Color(0xFFFFC66D), fontSize = 12.sp)
+                    }
+                    SettingsCard("About JARVIS", "Version 1.1 • Personal AI Assistant") {
+                        Text("Built for transparent, user-controlled assistance.", color = Muted, fontSize = 12.sp)
                     }
                     Spacer(Modifier.weight(1f))
                 }
@@ -432,8 +467,41 @@ private fun JarvisApp(onSpeak: (String) -> Unit) {
                 NavItem("◌", "Chat", tab == "Chat") { tab = "Chat" }
                 NavItem("✧", "Explore", tab == "Explore") { tab = "Explore" }
                 NavItem("◎", "Profile", tab == "Profile") { tab = "Profile" }
+                NavItem("⚙", "Settings", tab == "Settings") { tab = "Settings" }
             }
         }
+    }
+}
+
+@Composable
+private fun SettingsCard(title: String, description: String, content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        Modifier.fillMaxWidth().padding(vertical = 5.dp)
+            .clip(RoundedCornerShape(18.dp)).background(Panel)
+            .border(1.dp, Blue.copy(alpha = 0.28f), RoundedCornerShape(18.dp))
+            .padding(14.dp)
+    ) {
+        Text(title, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+        Spacer(Modifier.height(4.dp))
+        Text(description, color = Muted, fontSize = 12.sp)
+        Spacer(Modifier.height(8.dp))
+        content()
+    }
+}
+
+@Composable
+private fun SettingsToggle(title: String, description: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 5.dp).clip(RoundedCornerShape(16.dp))
+            .background(Panel).border(1.dp, Blue.copy(alpha = 0.25f), RoundedCornerShape(16.dp))
+            .padding(start = 14.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+            Text(description, color = Muted, fontSize = 11.sp)
+        }
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 
@@ -558,17 +626,16 @@ private fun NavItem(
     }
 }
 
-private fun askJarvis(question: String, apiKey: String): String {
-    if (apiKey.isBlank()) {
-        return "Gemini API key set nahi hai. GitHub Secrets mein GEMINI_API_KEY add karke app rebuild karo."
-    }
+private fun askJarvis(question: String): String {
+    // Intentionally no API key is embedded in the APK. Configure a trusted backend
+    // endpoint here before enabling cloud requests in a public release.
+    return "JARVIS is ready, but secure AI connection is not configured yet. For your safety, this build does not store a Gemini API key inside the APK. Connect a trusted backend to enable AI responses."
 
+    /*
     var connection: HttpURLConnection? = null
 
     return try {
-        val url = URL(
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey"
-        )
+        val url = URL("https://YOUR-SECURE-BACKEND.example/api/chat")
         connection = (url.openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             connectTimeout = 20000
@@ -623,4 +690,5 @@ private fun askJarvis(question: String, apiKey: String): String {
     } finally {
         connection?.disconnect()
     }
+    */
 }
